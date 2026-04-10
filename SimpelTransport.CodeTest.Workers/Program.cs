@@ -8,7 +8,10 @@ using SimpelTransport.CodeTest.Workers;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddDbContext<MyDbContext>(options => options.UseInMemoryDatabase("TestDb"), ServiceLifetime.Singleton);
+builder.Services.AddDbContext<MyDbContext>(
+    options => options.UseInMemoryDatabase("TestDb"),
+    ServiceLifetime.Singleton
+);
 builder.Services.AddSingleton<IMessageQueue, MockQueue>();
 builder.Services.AddHostedService<OrderWorker>();
 
@@ -18,11 +21,17 @@ using (var scope = host.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MyDbContext>();
     var queue = scope.ServiceProvider.GetRequiredService<IMessageQueue>();
-    
-    db.Orders.Add(new Order { Id = 1001, Status = "Pending", Price = 101m });
+
+    var order = new Order
+    {
+        Id = 1001,
+        Status = "Pending",
+        Price = 101m,
+    };
+    db.Orders.Add(order);
     db.SaveChanges();
-    
-    await queue.SendMessageAsync(new OrderMessageDto(1));
+
+    await queue.SendMessageAsync(new OrderMessageDto(order.Id));
 }
 
 Console.WriteLine("Worker started.");
