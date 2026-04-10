@@ -10,7 +10,7 @@ public class ShipmentValidator
         // TODO: Implement the logic to normalize the DeclaredType and validate against the business rules.
         // Currently, it just returns exactly what the customer sent (WHICH IS WRONG)
 
-        // NOTE: I didn't find any constraint about height???
+        // NOTE: I didn't find any constraint about height expect that 600 on "ANY" dimension???
 
         if (IsInvalidShipment(request.WeightKg, request.Dimensions))
             return new ValidationResultDto(false, string.Empty, "Too big for us");
