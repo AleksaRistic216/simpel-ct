@@ -38,3 +38,30 @@ If an admin updates the company name, we need to preserve the old name for legal
 - How would you handle Pagination if a company has thousands of users?
 - Describe the KeyConditionExpression and ExpressionAttributeValues required to pull the "Item Collection."
 - You may use the standard AWS SDK or high-performance alternatives (e.g., EfficientDynamoDB). Regardless of the tool, explain how you leverage the Partition Key and Sort Key to avoid multiple round-trips to the database.
+
+This isn't easy at all... Lets try thinking of high level only...
+
+Second rewrite... For PK I would go with `COMPANY#<id>` and under SK I would put company data (for specific version)
+and users. With that, we would have SKs something like this: `DATA#CURRENT`, `DATA#VERSION#001`, `DATA#VERSION#002`, `USER#<id>`, `USER#<id>`
+
+This will allow us to easily persist versions, but keep them separate for fast quering. When new version comes, copy current to
+DATA#VERSION#<next> with old data, and update new data in current.
+
+Regarding email lookup over multiple partitions, GSI with PK on users email will unify all users. 
+
+Now lets answer questions:
+
+ - Describe the parameters for your Query call for main query.
+   - Query over PK with `COMPANY#{id}`. Will get all company data along with its users in single query
+ - How do you use the Sort Key to ensure Users and Metadata come back together?
+   - I am not sure I do. I mean, I put them under same partition (`COMPANY#{id}`). Only thing I ensured (by "luck") is
+   - that DATA comes before USER, therefore I will always retreive company data in first call (if quering only by PK and it has a lot of users and exceeds limit)
+ - How would you handle Pagination if a company has thousands of users?
+   - Checking last evaluated key. If not null, read again by passing start key (last evaluated one)
+ - Describe the KeyConditionExpression and ExpressionAttributeValues required to pull the "Item Collection."
+   - KeyConditionExpression - tells how to get (for example match only PK or match PK and SK (by some condition, fot example to get only data or only users under company))
+   - ExpressionAttributeValues - passing actual values for KeyConditionExpression
+ - You may use the standard AWS SDK or high-performance alternatives (e.g., EfficientDynamoDB). Regardless of the tool, explain how you leverage the Partition Key and Sort Key to avoid multiple round-trips to the database.
+   - Only time I would go multiple times is if I fetch only by PK (returns data + all users which is thousands which makes)
+   it paginated. To solve this, I can match things by SK too, altho again will have same problem if fetching thousands users, but will
+   solve it if fetching only company details
